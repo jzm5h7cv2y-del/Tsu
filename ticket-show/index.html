@@ -66,6 +66,8 @@ label.field { display: grid; gap: 4px; font-size: 12px; color: var(--muted); fon
 input[type="text"], input[type="number"] { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 0; width: 100%; }
 input:focus-visible, button:focus-visible { outline: 2px solid var(--sea); outline-offset: 2px; }
 .settings input[type="number"] { width: 90px; }
+.settings #search { width: 190px; }
+.spot[hidden] { display: none; }
 .spots { display: grid; gap: 6px; }
 .spot { display: grid; grid-template-columns: 44px minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px; border-radius: 10px; }
 .spot.win { background: var(--warn-bg); }
@@ -135,7 +137,9 @@ textarea.copyfallback { width: 100%; min-height: 90px; font: 13px var(--font-num
         </div>
       </div>
       <div class="settings">
-        <label class="field">Anzahl Spots<input id="set-count" type="number" min="2" max="60" value="20"></label>
+        <label class="field">Anzahl Spots<input id="set-count" type="number" min="2" max="400" value="20"></label>
+        <label class="field">Gold Tickets<input id="set-gold" type="number" min="1" max="100" value="20"></label>
+        <label class="field">Suchen (Name oder Nr.)<input id="search" type="text" placeholder="z. B. 123 oder nami"></label>
         <label class="field">Preis pro Spot (€)<input id="set-price" type="number" min="0" step="0.5" value="5"></label>
       </div>
       <div class="col-heads" aria-hidden="true"><span>Nr.</span><span>Käufer (Whatnot-Name)</span><span>Karte als Gegenwert</span><span>Status</span></div>
@@ -144,7 +148,7 @@ textarea.copyfallback { width: 100%; min-height: 90px; font: 13px var(--font-num
     </section>
 
     <section class="panel" aria-labelledby="h-draw">
-      <h2 id="h-draw">Hauptpreis &amp; Ziehung</h2>
+      <h2 id="h-draw">Gold Tickets ziehen</h2>
       <label class="field">Hauptpreis<input id="prize" type="text" placeholder="z. B. OP-05 Luffy Gear 5 Manga Rare" value=""></label>
       <div class="wheel-box">
         <canvas id="wheel" aria-label="Glücksrad mit allen Spots, die mitziehen"></canvas>
@@ -153,14 +157,15 @@ textarea.copyfallback { width: 100%; min-height: 90px; font: 13px var(--font-num
       </div>
       <label class="toggle"><input id="only-paid" type="checkbox" checked> Nur bezahlte Spots ziehen</label>
       <p class="hint" id="wheel-info"></p>
-      <button type="button" class="primary" id="btn-spin">Rad drehen</button>
+      <button type="button" class="primary" id="btn-spin">Gold Ticket ziehen</button>
       <div class="winner" id="winner" hidden aria-live="polite">
-        <div class="eyebrow">Gewinner</div>
+        <div class="eyebrow">Gold Ticket Gewinner</div>
         <div class="big" id="winner-name"></div>
         <div class="sub" id="winner-sub"></div>
       </div>
+      <button type="button" id="btn-all">Alle restlichen Gold Tickets sofort ziehen</button>
       <div id="history-box" hidden>
-        <div class="eyebrow">Bisherige Ziehungen</div>
+        <div class="panel-head"><div class="eyebrow" id="gold-head">Gold Tickets</div><button type="button" id="btn-copy-gold">Gewinner kopieren</button></div>
         <ul class="history" id="history"></ul>
       </div>
       <div class="row-btns">
@@ -186,7 +191,7 @@ textarea.copyfallback { width: 100%; min-height: 90px; font: 13px var(--font-num
       ["", "", false], ["ace_flammen", "OP02 Ace (C)", false], ["", "", false],
       ["", "", false], ["yamato_de", "OP07 Yamato (C)", true], ["", "", false], ["", "", false], ["", "", false]
     ].map(function (s) { return { name: s[0], item: s[1], paid: s[2] }; }),
-    history: []
+    goldCount: 20, gold: []
   };
 
   function blank(n) { var a = []; for (var i = 0; i < n; i++) a.push({ name: "", item: "", paid: false }); return a; }
@@ -197,6 +202,9 @@ textarea.copyfallback { width: 100%; min-height: 90px; font: 13px var(--font-num
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 
   var S = load();
+  if (!S.gold) S.gold = [];
+  if (!S.goldCount) S.goldCount = 20;
+  delete S.history;
   var rot = 0, spinning = false, winnerIdx = -1;
   var $ = function (id) { return document.getElementById(id); };
   var eur = function (v) { return v.toLocaleString("de-DE", { style: "currency", currency: "EUR" }); };
@@ -232,7 +240,8 @@ textarea.copyfallback { width: 100%; min-height: 90px; font: 13px var(--font-num
 
   function eligible() {
     var out = [];
-    S.spots.forEach(function (sp, i) { if (sp.name.trim() && (!S.onlyPaid || sp.paid)) out.push(i); });
+    var won = {}; S.gold.forEach(function (g) { won[g.spot - 1] = true; });
+    S.spots.forEach(function (sp, i) { if (sp.name.trim() && (!S.onlyPaid || sp.paid) && !won[i]) out.push(i); });
     return out;
   }
 
@@ -243,7 +252,7 @@ textarea.copyfallback { width: 100%; min-height: 90px; font: 13px var(--font-num
       if (has) sold++;
       if (has && sp.paid) paid++;
       var row = $("spots").children[i];
-      if (row) { row.classList.toggle("sold", has); row.classList.toggle("win", i === winnerIdx); }
+      if (row) { row.classList.toggle("sold", has); row.classList.toggle("win", isGold(i)); }
     });
     var n = S.spots.length;
     $("st-sold").textContent = sold + "/" + n;
@@ -253,9 +262,13 @@ textarea.copyfallback { width: 100%; min-height: 90px; font: 13px var(--font-num
     $("st-bar").style.width = (n ? sold / n * 100 : 0) + "%";
     var el = eligible();
     $("wheel-info").textContent = el.length
-      ? el.length + " Spots im Rad. Jeder Spot hat dieselbe Chance (" + (100 / el.length).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %)."
+      ? el.length + " Spots im Rad (Gewinner fliegen raus). Chance pro Spot für das nächste Ticket: (" + (100 / el.length).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %)."
       : (S.onlyPaid ? "Noch kein bezahlter Spot. Hake bei den Käufern „bezahlt“ an." : "Noch kein Spot vergeben.");
-    $("btn-spin").disabled = spinning || el.length < 1;
+    var done = S.gold.length >= S.goldCount;
+    if (done) $("wheel-info").textContent = "Alle " + S.goldCount + " Gold Tickets sind gezogen. 🎉";
+    $("btn-spin").disabled = spinning || el.length < 1 || done;
+    $("btn-all").disabled = spinning || el.length < 1 || done;
+    $("btn-spin").textContent = done ? "Fertig" : "Gold Ticket " + (S.gold.length + 1) + "/" + S.goldCount + " ziehen";
     $("wheel-empty").hidden = el.length > 0;
     drawWheel();
     save();
@@ -279,13 +292,13 @@ textarea.copyfallback { width: 100%; min-height: 90px; font: 13px var(--font-num
       var a0 = rot - Math.PI / 2 + j * seg;
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, a0, a0 + seg); ctx.closePath();
       var c = cols[j % 3]; if (el.length % 3 === 1 && j === el.length - 1 && j > 0) c = cols[1];
-      ctx.fillStyle = idx === winnerIdx && !spinning ? css("--straw") : c; ctx.fill();
-      ctx.strokeStyle = css("--panel"); ctx.lineWidth = 2 * (window.devicePixelRatio || 1); ctx.stroke();
+      ctx.fillStyle = c; ctx.fill();
+      if (el.length <= 120) { ctx.strokeStyle = css("--panel"); ctx.lineWidth = 2 * (window.devicePixelRatio || 1); ctx.stroke(); }
       ctx.save(); ctx.translate(cx, cy); ctx.rotate(a0 + seg / 2);
       ctx.fillStyle = css("--wheel-text"); ctx.textAlign = "right"; ctx.textBaseline = "middle";
       var fs = Math.max(10, Math.min(R * 0.1, R * seg * 0.45));
       ctx.font = "600 " + fs + "px " + css("--font-num");
-      var label = "#" + (idx + 1);
+      var label = el.length > 40 ? "" : "#" + (idx + 1);
       if (el.length <= 14) { var nm = S.spots[idx].name.trim(); label = (nm.length > 12 ? nm.slice(0, 11) + "…" : nm) + "  #" + (idx + 1); ctx.font = "500 " + fs * 0.85 + "px " + css("--font-body"); }
       ctx.fillText(label, R - 12, 0); ctx.restore();
     });
@@ -318,27 +331,37 @@ textarea.copyfallback { width: 100%; min-height: 90px; font: 13px var(--font-num
   function finish(idx) {
     spinning = false; winnerIdx = idx; rot = rot % (Math.PI * 2);
     var sp = S.spots[idx];
+    addGold(idx);
     $("winner-name").textContent = "Spot #" + (idx + 1) + " · " + sp.name;
-    $("winner-sub").textContent = S.prize ? "gewinnt: " + S.prize : "gewinnt den Hauptpreis";
+    $("winner-sub").textContent = "🎫 Gold Ticket " + S.gold.length + " von " + S.goldCount + (S.prize ? " · " + S.prize : "");
     $("winner").hidden = false;
-    S.history.unshift({ spot: idx + 1, name: sp.name, prize: S.prize || "", time: new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) });
     renderHistory(); update();
     var row = $("spots").children[idx]; if (row) row.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 
+  function isGold(i) { return S.gold.some(function (g) { return g.spot === i + 1; }); }
+  function addGold(idx) {
+    S.gold.push({ ticket: S.gold.length + 1, spot: idx + 1, name: S.spots[idx].name.trim(), time: new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) });
+  }
   function renderHistory() {
     var ul = $("history"); ul.innerHTML = "";
-    S.history.slice(0, 10).forEach(function (h) {
+    S.gold.forEach(function (h) {
       var li = document.createElement("li");
-      var a = document.createElement("span"); a.textContent = "#" + h.spot + " " + h.name + (h.prize ? " – " + h.prize : "");
+      var a = document.createElement("span"); a.textContent = "🎫 " + h.ticket + ". Spot #" + h.spot + " · " + h.name;
       var b = document.createElement("time"); b.textContent = h.time;
       li.appendChild(a); li.appendChild(b); ul.appendChild(li);
     });
-    $("history-box").hidden = !S.history.length;
+    $("gold-head").textContent = "Gold Tickets " + S.gold.length + "/" + S.goldCount;
+    $("history-box").hidden = !S.gold.length;
+  }
+  function copyText(text, okMsg) {
+    var fb = $("copy-fallback");
+    function fallback() { fb.value = text; fb.hidden = false; fb.focus(); fb.select(); toast("Text markiert. Kopiere ihn mit Strg+C oder lange drücken."); }
+    try { navigator.clipboard.writeText(text).then(function () { fb.hidden = true; toast(okMsg); }, fallback); } catch (e) { fallback(); }
   }
 
   function setCount(n) {
-    n = Math.max(2, Math.min(60, Math.round(n) || 20));
+    n = Math.max(2, Math.min(400, Math.round(n) || 20));
     while (S.spots.length < n) S.spots.push({ name: "", item: "", paid: false });
     if (S.spots.length > n) {
       // nur leere Spots am Ende entfernen, damit keine Käufer verloren gehen
@@ -356,6 +379,24 @@ textarea.copyfallback { width: 100%; min-height: 90px; font: 13px var(--font-num
   $("set-count").addEventListener("change", function (e) { markEdited(); setCount(Number(e.target.value)); });
   $("only-paid").addEventListener("change", function (e) { S.onlyPaid = e.target.checked; winnerIdx = -1; update(); });
   $("btn-spin").addEventListener("click", spin);
+  $("set-gold").addEventListener("input", function (e) { S.goldCount = Math.max(1, Math.min(100, Math.round(Number(e.target.value)) || 20)); renderHistory(); update(); });
+  $("search").addEventListener("input", function (e) {
+    var q = e.target.value.trim().toLowerCase();
+    Array.prototype.forEach.call($("spots").children, function (row, i) {
+      row.hidden = !!q && String(i + 1) !== q && S.spots[i].name.toLowerCase().indexOf(q) < 0;
+    });
+  });
+  $("btn-all").addEventListener("click", function () {
+    if (spinning) return;
+    while (S.gold.length < S.goldCount) { var el = eligible(); if (!el.length) break; addGold(el[fairRandom(el.length)]); }
+    var last = S.gold[S.gold.length - 1];
+    if (last) { $("winner-name").textContent = "Alle Gold Tickets gezogen"; $("winner-sub").textContent = S.gold.length + " Gewinner, siehe Liste unten"; $("winner").hidden = false; }
+    renderHistory(); update();
+  });
+  $("btn-copy-gold").addEventListener("click", function () {
+    var text = "🎫 GOLD TICKETS " + (S.prize ? "(" + S.prize + ")" : "") + "\n" + S.gold.map(function (g) { return g.ticket + ". Spot #" + g.spot + " – " + g.name; }).join("\n");
+    copyText(text, "Gewinnerliste kopiert.");
+  });
 
   $("btn-copy").addEventListener("click", function () {
     var free = []; S.spots.forEach(function (sp, i) { if (!sp.name.trim()) free.push(i + 1); });
@@ -379,7 +420,7 @@ textarea.copyfallback { width: 100%; min-height: 90px; font: 13px var(--font-num
     }
     clearTimeout(armed); b.classList.remove("armed"); b.textContent = "Alles leeren";
     var n = S.spots.length;
-    S = { example: false, title: S.title, count: n, price: S.price, onlyPaid: S.onlyPaid, prize: "", spots: blank(n), history: [] };
+    S = { example: false, title: S.title, count: n, price: S.price, onlyPaid: S.onlyPaid, goldCount: S.goldCount, prize: "", spots: blank(n), gold: [] };
     winnerIdx = -1; $("winner").hidden = true; $("example-note").hidden = true; $("prize").value = "";
     renderSpots(); renderHistory(); update(); toast("Geleert. Viel Erfolg bei der Show!");
   });
@@ -390,6 +431,7 @@ textarea.copyfallback { width: 100%; min-height: 90px; font: 13px var(--font-num
   $("set-price").value = S.price;
   $("set-count").value = S.spots.length;
   $("only-paid").checked = S.onlyPaid !== false;
+  $("set-gold").value = S.goldCount;
   $("example-note").hidden = !S.example;
   renderSpots(); renderHistory();
   sizeCanvas(); update();
