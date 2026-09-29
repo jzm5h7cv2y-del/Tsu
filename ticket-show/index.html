@@ -1,0 +1,400 @@
+<title>One Piece Ticket Show</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Rubik:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: Kopfzeile mit Kennzahlen, darunter zwei Spalten – links die Spot-Liste, rechts Hauptpreis + Glücksrad. Auf dem Handy untereinander. */
+:root {
+  --bg: #eef3f6;
+  --panel: #ffffff;
+  --ink: #14222e;
+  --muted: #5b6b78;
+  --line: #d3dde4;
+  --sea: #1d4e74;
+  --straw: #d9a62e;
+  --red: #c8302a;
+  --ok: #2f8a4f;
+  --ok-bg: #e2f3e8;
+  --warn-bg: #fdf1d6;
+  --wheel-a: #1d4e74;
+  --wheel-b: #c8302a;
+  --wheel-c: #d9a62e;
+  --wheel-text: #ffffff;
+  --font-display: "Pirata One", "Georgia", serif;
+  --font-body: "Rubik", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1620; --panel: #13212d; --ink: #e6eef3; --muted: #93a6b4; --line: #243646;
+    --sea: #6fa8d6; --straw: #e8b940; --red: #ef5a4f; --ok: #5cc27f; --ok-bg: #173323; --warn-bg: #3a2f12;
+    --wheel-a: #245c88; --wheel-b: #b23129; --wheel-c: #b8871d; --wheel-text: #ffffff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1620; --panel: #13212d; --ink: #e6eef3; --muted: #93a6b4; --line: #243646;
+  --sea: #6fa8d6; --straw: #e8b940; --red: #ef5a4f; --ok: #5cc27f; --ok-bg: #173323; --warn-bg: #3a2f12;
+  --wheel-a: #245c88; --wheel-b: #b23129; --wheel-c: #b8871d; --wheel-text: #ffffff;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 48px; display: grid; gap: 20px; }
+h1, h2 { font-family: var(--font-display); font-weight: 400; margin: 0; text-wrap: balance; letter-spacing: .01em; }
+h1 { font-size: clamp(30px, 6vw, 44px); line-height: 1.05; }
+h2 { font-size: 26px; }
+.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 500; }
+header { display: grid; gap: 14px; }
+.title-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; justify-content: space-between; }
+.title-row input { font-family: var(--font-display); font-size: clamp(28px, 6vw, 42px); border: 0; background: transparent; color: var(--ink); padding: 0; width: 100%; min-width: 0; }
+.title-row input:focus-visible { outline: 2px dashed var(--straw); outline-offset: 4px; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; display: grid; gap: 2px; min-width: 110px; }
+.stat b { font-family: var(--font-num); font-size: 20px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+.bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--straw); width: 0; transition: width .3s; }
+.notice { background: var(--warn-bg); border-radius: 10px; padding: 10px 14px; font-size: 14px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+section.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.settings { display: flex; flex-wrap: wrap; gap: 12px; }
+label.field { display: grid; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 500; }
+input[type="text"], input[type="number"] { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 0; width: 100%; }
+input:focus-visible, button:focus-visible { outline: 2px solid var(--sea); outline-offset: 2px; }
+.settings input[type="number"] { width: 90px; }
+.spots { display: grid; gap: 6px; }
+.spot { display: grid; grid-template-columns: 44px minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px; border-radius: 10px; }
+.spot.win { background: var(--warn-bg); }
+.num { font-family: var(--font-num); font-weight: 600; font-variant-numeric: tabular-nums; text-align: center; border-radius: 8px; padding: 7px 0; background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+.spot.sold .num { background: var(--sea); border-color: var(--sea); color: var(--panel); }
+.spot.win .num { background: var(--straw); border-color: var(--straw); color: #14222e; }
+.paid { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; white-space: nowrap; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); user-select: none; }
+.paid input { accent-color: var(--ok); width: 16px; height: 16px; margin: 0; }
+.paid:has(input:checked) { background: var(--ok-bg); color: var(--ok); border-color: transparent; font-weight: 500; }
+@media (max-width: 520px) {
+  .spot { grid-template-columns: 40px minmax(0, 1fr) auto; }
+  .spot .item { grid-column: 2 / 4; }
+  .spot { border-bottom: 1px solid var(--line); border-radius: 0; padding-bottom: 8px; }
+}
+.col-heads { display: grid; grid-template-columns: 44px minmax(0, 1.2fr) minmax(0, 1fr) 94px; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding-inline: 4px; }
+@media (max-width: 520px) { .col-heads { display: none; } }
+button { font: inherit; font-weight: 500; cursor: pointer; border-radius: 9px; padding: 8px 14px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+button:hover { border-color: var(--sea); }
+button.primary { background: var(--red); border-color: var(--red); color: #fff; font-size: 17px; padding: 12px 20px; width: 100%; }
+button.primary:hover { filter: brightness(1.08); }
+button.primary:disabled { opacity: .5; cursor: not-allowed; filter: none; }
+button.danger { color: var(--red); }
+button.danger.armed { background: var(--red); color: #fff; border-color: var(--red); }
+.row-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.wheel-box { position: relative; width: 100%; max-width: 380px; aspect-ratio: 1; margin: 0 auto; }
+.wheel-box canvas { width: 100%; height: 100%; display: block; }
+.pointer { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 26px solid var(--straw); filter: drop-shadow(0 2px 2px rgba(0,0,0,.3)); }
+.empty-wheel { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--muted); padding: 40px; font-size: 14px; }
+.toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.toggle input { accent-color: var(--sea); width: 16px; height: 16px; }
+.winner { text-align: center; border-radius: 12px; padding: 14px; background: var(--warn-bg); display: grid; gap: 4px; }
+.winner .big { font-family: var(--font-display); font-size: 34px; line-height: 1.1; }
+.winner .sub { color: var(--muted); font-size: 14px; }
+.history { display: grid; gap: 4px; font-size: 14px; margin: 0; padding: 0; list-style: none; }
+.history li { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dashed var(--line); padding-block: 4px; }
+.history time { color: var(--muted); font-family: var(--font-num); font-size: 12px; }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100% - 32px); }
+textarea.copyfallback { width: 100%; min-height: 90px; font: 13px var(--font-num); background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+@media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Whatnot · Ticket Show</div>
+    <div class="title-row">
+      <input id="show-title" type="text" aria-label="Name der Show" value="One Piece Ticket Show">
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="st-sold">0/20</b><span>Spots vergeben</span></div>
+      <div class="stat"><b id="st-paid">0</b><span>bezahlt</span></div>
+      <div class="stat"><b id="st-open">20</b><span>noch frei</span></div>
+      <div class="stat"><b id="st-sum">0,00 €</b><span>Umsatz (bezahlt)</span></div>
+    </div>
+    <div class="bar" aria-hidden="true"><i id="st-bar"></i></div>
+    <div class="notice" id="example-note" hidden>
+      <span>Das sind <b>Beispieldaten</b>, damit du siehst, wie es aussieht. Für deine echte Show tippe unten auf „Alles leeren“.</span>
+    </div>
+  </header>
+
+  <div class="cols">
+    <section class="panel" aria-labelledby="h-spots">
+      <div class="panel-head">
+        <h2 id="h-spots">Spots</h2>
+        <div class="row-btns">
+          <button type="button" id="btn-copy">Freie Spots kopieren</button>
+        </div>
+      </div>
+      <div class="settings">
+        <label class="field">Anzahl Spots<input id="set-count" type="number" min="2" max="60" value="20"></label>
+        <label class="field">Preis pro Spot (€)<input id="set-price" type="number" min="0" step="0.5" value="5"></label>
+      </div>
+      <div class="col-heads" aria-hidden="true"><span>Nr.</span><span>Käufer (Whatnot-Name)</span><span>Karte als Gegenwert</span><span>Status</span></div>
+      <div class="spots" id="spots"></div>
+      <textarea class="copyfallback" id="copy-fallback" hidden readonly aria-label="Text zum Kopieren"></textarea>
+    </section>
+
+    <section class="panel" aria-labelledby="h-draw">
+      <h2 id="h-draw">Hauptpreis &amp; Ziehung</h2>
+      <label class="field">Hauptpreis<input id="prize" type="text" placeholder="z. B. OP-05 Luffy Gear 5 Manga Rare" value=""></label>
+      <div class="wheel-box">
+        <canvas id="wheel" aria-label="Glücksrad mit allen Spots, die mitziehen"></canvas>
+        <div class="pointer" aria-hidden="true"></div>
+        <div class="empty-wheel" id="wheel-empty" hidden>Trag links Käufer ein, dann erscheinen ihre Spots hier im Rad.</div>
+      </div>
+      <label class="toggle"><input id="only-paid" type="checkbox" checked> Nur bezahlte Spots ziehen</label>
+      <p class="hint" id="wheel-info"></p>
+      <button type="button" class="primary" id="btn-spin">Rad drehen</button>
+      <div class="winner" id="winner" hidden aria-live="polite">
+        <div class="eyebrow">Gewinner</div>
+        <div class="big" id="winner-name"></div>
+        <div class="sub" id="winner-sub"></div>
+      </div>
+      <div id="history-box" hidden>
+        <div class="eyebrow">Bisherige Ziehungen</div>
+        <ul class="history" id="history"></ul>
+      </div>
+      <div class="row-btns">
+        <button type="button" class="danger" id="btn-reset">Alles leeren</button>
+      </div>
+      <p class="hint">Alles wird nur in diesem Browser gespeichert. Tipp: Nutze für die Show immer dasselbe Gerät und denselben Browser.</p>
+    </section>
+  </div>
+</div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+(function () {
+  var KEY = "op-ticket-show-v1";
+  var EXAMPLE = {
+    example: true, title: "One Piece Ticket Show", count: 20, price: 5, onlyPaid: true,
+    prize: "OP-05 Monkey D. Luffy Gear 5 (Manga Rare)",
+    spots: [
+      ["strawhat_sammler", "OP01 Zoro (C)", true], ["nami_cards", "OP02 Nami (UC)", true], ["", "", false],
+      ["grandline_tcg", "OP03 Sanji (C)", true], ["kaido_fan", "OP04 Kaido (R)", false], ["", "", false],
+      ["robin_pulls", "OP05 Robin (UC)", true], ["", "", false], ["merry_breaks", "OP01 Usopp (C)", true],
+      ["", "", false], ["law.kartenjagd", "OP06 Law (UC)", true], ["", "", false],
+      ["", "", false], ["ace_flammen", "OP02 Ace (C)", false], ["", "", false],
+      ["", "", false], ["yamato_de", "OP07 Yamato (C)", true], ["", "", false], ["", "", false], ["", "", false]
+    ].map(function (s) { return { name: s[0], item: s[1], paid: s[2] }; }),
+    history: []
+  };
+
+  function blank(n) { var a = []; for (var i = 0; i < n; i++) a.push({ name: "", item: "", paid: false }); return a; }
+  function load() {
+    try { var raw = localStorage.getItem(KEY); if (raw) return JSON.parse(raw); } catch (e) {}
+    return JSON.parse(JSON.stringify(EXAMPLE));
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+  var S = load();
+  var rot = 0, spinning = false, winnerIdx = -1;
+  var $ = function (id) { return document.getElementById(id); };
+  var eur = function (v) { return v.toLocaleString("de-DE", { style: "currency", currency: "EUR" }); };
+
+  function toast(msg) {
+    var t = $("toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toast._t); toast._t = setTimeout(function () { t.hidden = true; }, 2200);
+  }
+
+  function markEdited() { if (S.example) { S.example = false; $("example-note").hidden = true; } }
+
+  function renderSpots() {
+    var box = $("spots"); box.innerHTML = "";
+    S.spots.forEach(function (sp, i) {
+      var n = i + 1;
+      var row = document.createElement("div");
+      row.className = "spot";
+      row.dataset.i = i;
+      row.innerHTML =
+        '<div class="num">' + n + '</div>' +
+        '<input type="text" class="name" id="spot-name-' + n + '" placeholder="Käufer" aria-label="Käufer Spot ' + n + '">' +
+        '<input type="text" class="item" id="spot-item-' + n + '" placeholder="Karte" aria-label="Karte für Spot ' + n + '">' +
+        '<label class="paid"><input type="checkbox" id="spot-paid-' + n + '"> bezahlt</label>';
+      row.querySelector(".name").value = sp.name;
+      row.querySelector(".item").value = sp.item;
+      row.querySelector("input[type=checkbox]").checked = sp.paid;
+      row.querySelector(".name").addEventListener("input", function (e) { sp.name = e.target.value; markEdited(); update(); });
+      row.querySelector(".item").addEventListener("input", function (e) { sp.item = e.target.value; markEdited(); save(); });
+      row.querySelector("input[type=checkbox]").addEventListener("change", function (e) { sp.paid = e.target.checked; markEdited(); update(); });
+      box.appendChild(row);
+    });
+  }
+
+  function eligible() {
+    var out = [];
+    S.spots.forEach(function (sp, i) { if (sp.name.trim() && (!S.onlyPaid || sp.paid)) out.push(i); });
+    return out;
+  }
+
+  function update() {
+    var sold = 0, paid = 0;
+    S.spots.forEach(function (sp, i) {
+      var has = !!sp.name.trim();
+      if (has) sold++;
+      if (has && sp.paid) paid++;
+      var row = $("spots").children[i];
+      if (row) { row.classList.toggle("sold", has); row.classList.toggle("win", i === winnerIdx); }
+    });
+    var n = S.spots.length;
+    $("st-sold").textContent = sold + "/" + n;
+    $("st-paid").textContent = paid;
+    $("st-open").textContent = n - sold;
+    $("st-sum").textContent = eur(paid * (Number(S.price) || 0));
+    $("st-bar").style.width = (n ? sold / n * 100 : 0) + "%";
+    var el = eligible();
+    $("wheel-info").textContent = el.length
+      ? el.length + " Spots im Rad. Jeder Spot hat dieselbe Chance (" + (100 / el.length).toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " %)."
+      : (S.onlyPaid ? "Noch kein bezahlter Spot. Hake bei den Käufern „bezahlt“ an." : "Noch kein Spot vergeben.");
+    $("btn-spin").disabled = spinning || el.length < 1;
+    $("wheel-empty").hidden = el.length > 0;
+    drawWheel();
+    save();
+  }
+
+  // Glücksrad
+  var cv = $("wheel"), ctx = cv.getContext("2d");
+  function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  function sizeCanvas() {
+    var r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    cv.width = Math.max(1, Math.round(r.width * d)); cv.height = Math.max(1, Math.round(r.height * d));
+    drawWheel();
+  }
+  function drawWheel() {
+    var W = cv.width, H = cv.height; ctx.clearRect(0, 0, W, H);
+    var el = eligible(); if (!el.length) return;
+    var cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 - 4 * (window.devicePixelRatio || 1);
+    var seg = Math.PI * 2 / el.length;
+    var cols = [css("--wheel-a"), css("--wheel-b"), css("--wheel-c")];
+    el.forEach(function (idx, j) {
+      var a0 = rot - Math.PI / 2 + j * seg;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, a0, a0 + seg); ctx.closePath();
+      var c = cols[j % 3]; if (el.length % 3 === 1 && j === el.length - 1 && j > 0) c = cols[1];
+      ctx.fillStyle = idx === winnerIdx && !spinning ? css("--straw") : c; ctx.fill();
+      ctx.strokeStyle = css("--panel"); ctx.lineWidth = 2 * (window.devicePixelRatio || 1); ctx.stroke();
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(a0 + seg / 2);
+      ctx.fillStyle = css("--wheel-text"); ctx.textAlign = "right"; ctx.textBaseline = "middle";
+      var fs = Math.max(10, Math.min(R * 0.1, R * seg * 0.45));
+      ctx.font = "600 " + fs + "px " + css("--font-num");
+      var label = "#" + (idx + 1);
+      if (el.length <= 14) { var nm = S.spots[idx].name.trim(); label = (nm.length > 12 ? nm.slice(0, 11) + "…" : nm) + "  #" + (idx + 1); ctx.font = "500 " + fs * 0.85 + "px " + css("--font-body"); }
+      ctx.fillText(label, R - 12, 0); ctx.restore();
+    });
+    ctx.beginPath(); ctx.arc(cx, cy, R * 0.12, 0, Math.PI * 2); ctx.fillStyle = css("--panel"); ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = css("--straw"); ctx.stroke();
+  }
+
+  function fairRandom(n) {
+    var buf = new Uint32Array(1), lim = Math.floor(4294967296 / n) * n, x;
+    do { crypto.getRandomValues(buf); x = buf[0]; } while (x >= lim);
+    return x % n;
+  }
+
+  function spin() {
+    var el = eligible(); if (!el.length || spinning) return;
+    spinning = true; winnerIdx = -1; $("winner").hidden = true; update();
+    var j = fairRandom(el.length), seg = Math.PI * 2 / el.length;
+    var jitter = (fairRandom(1000) / 1000 - 0.5) * seg * 0.7;
+    var targetMod = (((-(j + 0.5) * seg + jitter) - rot) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+    var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var start = rot, delta = targetMod + Math.PI * 2 * (reduce ? 0 : 6), dur = reduce ? 1 : 5200, t0 = performance.now();
+    function frame(now) {
+      var p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 4);
+      rot = start + delta * e; drawWheel();
+      if (p < 1) requestAnimationFrame(frame); else finish(el[j]);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function finish(idx) {
+    spinning = false; winnerIdx = idx; rot = rot % (Math.PI * 2);
+    var sp = S.spots[idx];
+    $("winner-name").textContent = "Spot #" + (idx + 1) + " · " + sp.name;
+    $("winner-sub").textContent = S.prize ? "gewinnt: " + S.prize : "gewinnt den Hauptpreis";
+    $("winner").hidden = false;
+    S.history.unshift({ spot: idx + 1, name: sp.name, prize: S.prize || "", time: new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) });
+    renderHistory(); update();
+    var row = $("spots").children[idx]; if (row) row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  function renderHistory() {
+    var ul = $("history"); ul.innerHTML = "";
+    S.history.slice(0, 10).forEach(function (h) {
+      var li = document.createElement("li");
+      var a = document.createElement("span"); a.textContent = "#" + h.spot + " " + h.name + (h.prize ? " – " + h.prize : "");
+      var b = document.createElement("time"); b.textContent = h.time;
+      li.appendChild(a); li.appendChild(b); ul.appendChild(li);
+    });
+    $("history-box").hidden = !S.history.length;
+  }
+
+  function setCount(n) {
+    n = Math.max(2, Math.min(60, Math.round(n) || 20));
+    while (S.spots.length < n) S.spots.push({ name: "", item: "", paid: false });
+    if (S.spots.length > n) {
+      // nur leere Spots am Ende entfernen, damit keine Käufer verloren gehen
+      while (S.spots.length > n && !S.spots[S.spots.length - 1].name.trim()) S.spots.pop();
+      if (S.spots.length > n) toast("Spots mit Käufern bleiben stehen. Leere sie zuerst.");
+    }
+    S.count = S.spots.length; $("set-count").value = S.count;
+    winnerIdx = -1; renderSpots(); update();
+  }
+
+  // Events
+  $("show-title").addEventListener("input", function (e) { S.title = e.target.value; document.title = e.target.value || "One Piece Ticket Show"; markEdited(); save(); });
+  $("prize").addEventListener("input", function (e) { S.prize = e.target.value; markEdited(); save(); });
+  $("set-price").addEventListener("input", function (e) { S.price = Number(e.target.value) || 0; markEdited(); update(); });
+  $("set-count").addEventListener("change", function (e) { markEdited(); setCount(Number(e.target.value)); });
+  $("only-paid").addEventListener("change", function (e) { S.onlyPaid = e.target.checked; winnerIdx = -1; update(); });
+  $("btn-spin").addEventListener("click", spin);
+
+  $("btn-copy").addEventListener("click", function () {
+    var free = []; S.spots.forEach(function (sp, i) { if (!sp.name.trim()) free.push(i + 1); });
+    var text = free.length
+      ? "🎟️ Noch " + free.length + " von " + S.spots.length + " Spots frei (" + eur(Number(S.price) || 0) + " pro Spot): " + free.join(", ") + (S.prize ? "\n🏴‍☠️ Hauptpreis: " + S.prize : "")
+      : "🎟️ Alle " + S.spots.length + " Spots sind weg! Gleich wird gezogen 🏴‍☠️";
+    var fb = $("copy-fallback");
+    function fallback() { fb.value = text; fb.hidden = false; fb.focus(); fb.select(); toast("Text markiert. Kopiere ihn mit Strg+C oder lange drücken."); }
+    try {
+      navigator.clipboard.writeText(text).then(function () { fb.hidden = true; toast("Kopiert. Füg es jetzt im Whatnot-Chat ein."); }, fallback);
+    } catch (e) { fallback(); }
+  });
+
+  var armed = null;
+  $("btn-reset").addEventListener("click", function () {
+    var b = $("btn-reset");
+    if (!b.classList.contains("armed")) {
+      b.classList.add("armed"); b.textContent = "Wirklich alles leeren? Nochmal tippen";
+      armed = setTimeout(function () { b.classList.remove("armed"); b.textContent = "Alles leeren"; }, 3500);
+      return;
+    }
+    clearTimeout(armed); b.classList.remove("armed"); b.textContent = "Alles leeren";
+    var n = S.spots.length;
+    S = { example: false, title: S.title, count: n, price: S.price, onlyPaid: S.onlyPaid, prize: "", spots: blank(n), history: [] };
+    winnerIdx = -1; $("winner").hidden = true; $("example-note").hidden = true; $("prize").value = "";
+    renderSpots(); renderHistory(); update(); toast("Geleert. Viel Erfolg bei der Show!");
+  });
+
+  // Start
+  $("show-title").value = S.title || "One Piece Ticket Show";
+  $("prize").value = S.prize || "";
+  $("set-price").value = S.price;
+  $("set-count").value = S.spots.length;
+  $("only-paid").checked = S.onlyPaid !== false;
+  $("example-note").hidden = !S.example;
+  renderSpots(); renderHistory();
+  sizeCanvas(); update();
+  window.addEventListener("resize", sizeCanvas);
+  if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawWheel);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawWheel);
+})();
+</script>
